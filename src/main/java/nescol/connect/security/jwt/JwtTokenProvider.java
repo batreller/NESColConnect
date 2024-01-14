@@ -7,7 +7,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -27,8 +26,6 @@ public class JwtTokenProvider {
 
     @Value("${jwt.token.expired}")
     private long validityInMilliseconds;
-
-    private UserDetailsService userService;
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
@@ -55,7 +52,7 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    Authentication getAuthentication(String token) {
+    public Authentication getAuthentication(String token) {
         Long userId = Long.valueOf(getUserId(token));
         return new UsernamePasswordAuthenticationToken(userId, null, Collections.singleton(new SimpleGrantedAuthority("USER")));
     }
@@ -68,17 +65,12 @@ public class JwtTokenProvider {
         return bearerToken;
     }
 
-    boolean validateToken(String token) {
+    public boolean validateToken(String token) {
         Jws<Claims> claims = Jwts.parser().setSigningKey(secret).parseClaimsJws(token);
         return !claims.getBody().getExpiration().before(new Date());
     }
 
     private String getUserId(String token) {
         return Jwts.parser().setSigningKey(secret).parseClaimsJws(token).getBody().getSubject();
-    }
-
-    @Resource
-    public void setUserService(UserDetailsService userService) {
-        this.userService = userService;
     }
 }
