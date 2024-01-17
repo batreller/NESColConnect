@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="./css/main.css">
+    <title>Chat Application</title>
+</head>
+<body>
+
+<script>
+    // makeInvisible("login-page")
+    // makeVisible("chat-page")
+</script>
+
+<script>
+    async function hashString(input) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(input);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
+    }
+
+    function makeVisible(elementId) {
+        var element = document.getElementById(elementId);
+        if (element) {
+            element.classList.remove("hidden");
+        }
+    }
+
+    // Function to hide the message
+    function makeInvisible(elementId) {
+        var element = document.getElementById(elementId);
+        if (element) {
+            element.classList.add("hidden");
+        }
+    }
+
+    function toggleVisibility(elementId) {
+        var element = document.getElementById(elementId);
+        if (element.style.display === "none") {
+            element.style.display = "block";
+        } else {
+            element.style.display = "none";
+        }
+    }
+
+    function makeButtonClickable(elementId) {
+        var button = document.getElementById(elementId);
+        button.classList.remove("unclickable-button");
+        button.style.pointerEvents = "auto";
+        button.style.opacity = "1";
+    }
+
+    function makeButtonUnclickable(elementId) {
+        var button = document.getElementById(elementId);
+        button.classList.add("unclickable-button");
+        button.style.pointerEvents = "none";
+        button.style.opacity = "0.5"; // Optional: You can also reduce opacity to visually indicate that the button is disabled
+    }
+
+
+</script>
+<h1>NESCol Connect</h1>
+<h2 id="falseSuccessRegistraion" style="color: red; display: none;">Invalid Student ID/Name/Surname OR user with this ID
+    is already registered</h2>
+<h2 id="falseSuccessLogin" style="color: red; display: none;">Invalid Student ID or password</h2>
+<h2 id="unknownError" style="color: red; display: none;">Unknown error, check console for details</h2>
+
+<div class="user-form hidden" id="login-page">
+    <h2 id="form-title">Login</h2>
+    <h4 id="toggle-text">or <a href="#" id="toggle-link">register</a></h4>
+    <form onsubmit="loginFormSubmitted(event)">
+        <label for="studentId">NESCol Student ID:</label>
+        <input type="text" id="studentId" name="studentId" required>
+
+        <label for="password">Password: </label>
+        <input type="text" placeholder="   Your random password..." id="password" name="password" required>
+
+        <div id="studentNameDiv" class="hidden">
+            <label for="studentName">Your name:</label>
+            <input type="text" id="studentName" name="studentName">
+        </div>
+        <div id="studentSurnameDiv" class="hidden">
+            <label for="studentSurname">Your surname:</label>
+            <input type="text" id="studentSurname" name="studentSurname">
+        </div>
+
+        <button type="submit" id="submitButton">Login</button>
+    </form>
+</div>
+<script>
+    async function loginFormSubmitted(event) {
+        event.preventDefault(); // Prevents the default form submission behavior
+        console.log('form submitted1');
+
+        makeInvisible("falseSuccessRegistraion")
+        makeInvisible("falseSuccessLogin")
+        makeInvisible("unknownError")
+        makeInvisible("chatClosed")
+        makeInvisible("chatSearching")
+        makeInvisible('qrcode-area')
+
+        console.log('form submitted2');
+        // Get form data
+        var reg = false;
+        var studentId = document.getElementById('studentId').value;
+        var tempPassword = document.getElementById('password').value;
+        var password = await hashString(tempPassword);
+        try {
+            var studentName = document.getElementById('studentName').value;
+            var studentSurname = document.getElementById('studentSurname').value;
+            if (studentName && studentSurname) {
+                reg = true;
+            }
+        } catch (error) {
+            console.error("An error occurred:", error.message);
+        }
+
+        var requestData;
+        if (reg) {
+            requestData = {
+                "nescolId": studentId,
+                "password": password,
+                "name": studentName,
+                "surname": studentSurname
+            };
+
+        } else {
+            requestData = {
+                "secret": await hashString(studentId + await hashString(password))
+            }
+
+        }
+        // Make an AJAX request (assuming you are using the Fetch API)
+        var apiEndpoint = reg ? "/api/auth/register" : "/api/auth/login";
+
+        fetch(apiEndpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // stores twice hashed password to use it for encryption/decryption in future
+                    localStorage.setItem("twiceHashedPassword", hashString(password))
+                    localStorage.setItem("token", data.token)
+                    makeVisible("chat-page")
+                    // makeVisible("message-input")
+                    makeInvisible("login-page")
+                } else {
+                    document.getElementById('studentId').value = '';
+                    document.getElementById('password').value = '';
+                    document.getElementById('studentName').value = '';
+                    document.getElementById('studentSurname').value = '';
+
+                    if (reg) {
+                        makeVisible("falseSuccessRegistraion")
+                    } else {
+                        makeVisible("falseSuccessLogin")
+                    }
+                }
+
+            })
+            .catch(error => {
+                makeVisible("unknownError")
+                document.getElementById('studentId').outerText = ""
+                document.getElementById('password').outerText = ""
+                document.getElementById('studentName').outerText = ""
+                document.getElementById('studentSurname').outerText = ""
+
+                // Handle errors here
+                console.error('Error:', error);
+            });
+    }
+</script>
+
+
+<script>
+    document.getElementById('toggle-link').addEventListener('click', function (event) {
+        event.preventDefault();
+        toggleForm();
+    });
+
+    function toggleForm() {
+        var formTitle = document.getElementById('form-title');
+        var toggleText = document.getElementById('toggle-text');
+        var toggleLink = document.getElementById('toggle-link');
+        var studentName = document.getElementById('studentNameDiv');
+        var studentSurname = document.getElementById('studentSurnameDiv');
+        var submitButton = document.getElementById('submitButton');
+
+        if (formTitle.innerText === 'Login') {
+            formTitle.innerText = 'Register';
+            toggleText.innerHTML = 'or <a href="#" id="toggle-link">login</a>';
+            toggleLink = document.getElementById('toggle-link');
+            toggleLink.addEventListener('click', function (event) {
+                event.preventDefault();
+                toggleForm();
+            });
+
+            studentName.classList.remove('hidden');
+            studentSurname.classList.remove('hidden');
+            submitButton.innerText = 'Register';
+        } else {
+            formTitle.innerText = 'Login';
+            toggleText.innerHTML = 'or <a href="#" id="toggle-link">register</a>';
+            toggleLink = document.getElementById('toggle-link');
+            toggleLink.addEventListener('click', function (event) {
+                event.preventDefault();
+                toggleForm();
+            });
+
+            studentName.classList.add('hidden');
+            studentSurname.classList.add('hidden');
+            submitButton.innerText = 'Login';
+        }
+    }
+</script>
+
+<div class="chat-page hidden" id="chat-page">
+    <div class="settings-area">
+        <button class="light-blue-button" id="findStudent">Find a student</button>
+        <button class="light-blue-button unclickable-button" id="stopBtn" onclick="closeWebsocketConnection(event)">Finish chat</button>
+        <!--        <button class="light-blue-button" id="rerollBtn">Reroll</button>-->
+    </div>
+
+    <div class="chat-container">
+
+        <div class="chat-area">
+            <div class="chat-area" id="chat-messages">
+            </div>
+
+            <form id="messageForm" name="messageForm" onsubmit="sendMessage(event)">
+                <div class="message-input hidden" id="chatClosed">
+                    <h2 style="color: orangered">Chat was closed</h2>
+                </div>
+                <div class="message-input hidden" id="chatSearching">
+                    <h2 style="color: greenyellow">Searching chat...</h2>
+                </div>
+                <div class="message-input hidden" id="message-input">
+                    <input autocomplete="off" type="text" id="message" placeholder="Type your message...">
+                    <button>Send</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="qr-code-area hidden" id="qrcode-area">
+    </div>
+
+</div>
+
+<!--<div class="chat-page" id="chat-page">-->
+<!--    <div class="settings-area">-->
+<!--        <button class="light-blue-button" id="findStudent">Find a student</button>-->
+<!--        <button class="light-blue-button unclickable-button" id="stopBtn">Finish chat</button>-->
+<!--        &lt;!&ndash;        <button class="light-blue-button" id="rerollBtn">Reroll</button>&ndash;&gt;-->
+<!--    </div>-->
+
+<!--    <div class="chat-container">-->
+<!--            <div class="chat-area" id="chat-messages">-->
+<!--            </div>-->
+
+<!--            <form id="messageForm" name="messageForm">-->
+<!--                <div class="message-input">-->
+<!--                    <input autocomplete="off" type="text" id="message" placeholder="Type your message...">-->
+<!--                    <button>Send</button>-->
+<!--                </div>-->
+<!--            </form>-->
+<!--    </div>-->
+<!--</div>-->
+
+
+<script>
+    var findStudentButton = document.getElementById('findStudent');
+
+    findStudentButton.addEventListener('click', function () {
+        connectToWebsocket(localStorage.getItem("token"))
+    });
+
+</script>
+
+<script>
+    var apiEndpoint = "/api/user/me";
+
+    fetch(apiEndpoint, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 403) {
+                makeVisible("login-page")
+                makeInvisible("chat-page")
+            } else if (data.success && localStorage.getItem('twiceHashedPassword')) {
+                makeInvisible("login-page");
+                makeVisible("chat-page");
+            }
+            })
+        .catch(error => {
+            console.log('request error')
+            makeVisible("login-page")
+            makeInvisible("chat-page")
+
+        });
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.4/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+<script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+<script src="./js/main.js"></script>
+</body>
+</html>
