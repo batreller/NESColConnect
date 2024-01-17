@@ -1,6 +1,6 @@
 package nescol.connect.interceptor;
 
-import nescol.connect.service.ChatService;
+import nescol.connect.facade.ChatFacade;
 import nescol.connect.service.WebSocketAuthenticatorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.Message;
@@ -21,7 +21,7 @@ public class AuthChannelInterceptorAdapter implements ChannelInterceptor {
     private final WebSocketAuthenticatorService webSocketAuthenticatorService;
 
     @Autowired
-    private ChatService chatService;
+    private ChatFacade chatFacade;
 
     @Inject
     public AuthChannelInterceptorAdapter(final WebSocketAuthenticatorService webSocketAuthenticatorService) {
@@ -35,7 +35,7 @@ public class AuthChannelInterceptorAdapter implements ChannelInterceptor {
         if (StompCommand.CONNECT == accessor.getCommand()) {
             String token = accessor.getFirstNativeHeader(TOKEN_HEADER);
             final UsernamePasswordAuthenticationToken user = webSocketAuthenticatorService.getAuthenticatedOrFail(token);
-            chatService.saveSession(user, accessor.getSessionId());
+            chatFacade.saveSession(user, accessor.getSessionId());
             accessor.setUser(user);
         }
         return message;

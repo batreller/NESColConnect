@@ -3,11 +3,26 @@
     {
       "name": "jwt.token.secret",
       "type": "java.lang.String",
-      "description": "Description for jwt.token.secret."
+      "description": "JWT Token secret"
     },
     {
       "name": "jwt.token.expired",
+      "type": "java.lang.Long",
+      "description": "JWT Token expiry time"
+    },
+    {
+      "name": "time.to.accept.chat",
+      "type": "java.lang.Long",
+      "description": "Time to accept chat"
+    },
+    {
+      "name": "time.chat.live",
+      "type": "java.lang.Long",
+      "description": "Time chat live"
+    },
+    {
+      "name": "time.cooldown.same.student",
       "type": "java.lang.String",
-      "description": "Description for jwt.token.expired."
+      "description": "Cooldown period during which two people cannot encounter each other again in the same chat"
     }
   ] }
