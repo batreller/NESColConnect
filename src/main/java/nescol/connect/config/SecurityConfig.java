@@ -42,7 +42,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers(CSS_ENDPOINT).permitAll()
                 .antMatchers(FAVICON_ENDPOINT).permitAll()
                 .antMatchers(AUTH_ENDPOINT).permitAll()
-                .anyRequest().denyAll();
+                .anyRequest().authenticated();
 
         // Add JWT token configuration
         http.apply(new JwtConfigurer(jwtTokenProvider));
